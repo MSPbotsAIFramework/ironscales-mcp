@@ -118,3 +118,9 @@ def test_error_envelope(status, code, retryable):
 def test_tool_without_credentials_returns_not_configured():
     content, _ = asyncio.run(create_mcp_server().call_tool("ironscales_incidents_list", {}))
     assert json.loads(content[0].text)["error"]["code"] == "not_configured"
+
+
+def test_incidents_list_limit_capped_at_200(tools):
+    schema = tools["ironscales_incidents_list"].inputSchema["properties"]["limit"]
+    maxima = [schema.get("maximum")] + [option.get("maximum") for option in schema.get("anyOf", [])]
+    assert 200 in maxima and not any(m and m > 200 for m in maxima)

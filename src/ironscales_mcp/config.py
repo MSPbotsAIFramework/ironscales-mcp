@@ -20,7 +20,7 @@ API_BASE_URL = "https://appapi.ironscales.com/appapi"
 # normally holds company.all, a partner (MSP) key partner.all.
 DEFAULT_SCOPE_SETS: tuple[tuple[str, ...], ...] = (("company.all",), ("partner.all",))
 DEFAULT_LIMIT = 25
-MAX_LIMIT = 500
+MAX_LIMIT = 200
 
 
 class Settings(BaseSettings):
