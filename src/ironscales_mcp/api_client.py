@@ -95,6 +95,9 @@ class IronscalesCredentials:
     api_key: str
     company_id: int
     scopes: tuple[str, ...] | None = None
+    # Set when a header value is malformed: tools then return invalid_argument
+    # instead of calling IRONSCALES, while tools/list still works.
+    header_error: str | None = None
 
     def __repr__(self) -> str:  # never leak the key into logs or tracebacks
         return f"IronscalesCredentials(company_id={self.company_id}, api_key=<redacted>)"
@@ -119,6 +122,7 @@ class IronscalesClient:
     def __init__(self, credentials: IronscalesCredentials, http_client: httpx.AsyncClient | None = None):
         self._credentials = credentials
         self._http = http_client
+        self.header_error = credentials.header_error
         self.company_id = credentials.company_id
 
     # ---- auth -----------------------------------------------------------------

@@ -89,7 +89,11 @@ def _error(scope: Scope, receive: Receive, send: Send, status: int, error: str, 
 
 
 class GatewayCredentialsMiddleware:
-    """Reads the IRONSCALES API key and company id on /mcp requests into the request context."""
+    """Reads the IRONSCALES API key and company id on /mcp requests into the request context.
+
+    Missing required headers -> 401 listing them. A malformed company id or scope list
+    does not block the request (tools/list must work with any values); tools report it instead.
+    """
 
     def __init__(self, app: ASGIApp):
         self.app = app
@@ -106,16 +110,18 @@ class GatewayCredentialsMiddleware:
             missing = [h for h, v in ((HEADER_API_KEY, api_key), (HEADER_COMPANY_ID, company)) if not v]
             await _error(scope, receive, send, 401, "Missing credentials", f"Missing header(s): {', '.join(missing)}")
             return
-        if not company.isdigit() or int(company) < 1:
-            await _error(scope, receive, send, 400, "Invalid credentials", f"{HEADER_COMPANY_ID} must be the numeric company id")
-            return
+        errors = []
+        company_id = int(company) if company.isdigit() else 0
+        if company_id < 1:
+            errors.append(f"{HEADER_COMPANY_ID} must be the numeric company id")
         scopes = parse_scopes(_clean(request.headers.get(HEADER_SCOPES)))
         if scopes and not all(_SCOPE.match(s) for s in scopes):
-            await _error(scope, receive, send, 400, "Invalid credentials", f"{HEADER_SCOPES} must list scopes like company.all")
-            return
+            errors.append(f"{HEADER_SCOPES} must list scopes like company.all")
+            scopes = None
+        header_error = "; ".join(errors) or None
 
         request_id = (request.headers.get("x-request-id") or "").strip()[:64] or uuid.uuid4().hex[:12]
-        creds_token = _credentials_var.set(IronscalesCredentials(api_key, int(company), scopes))
+        creds_token = _credentials_var.set(IronscalesCredentials(api_key, company_id, scopes, header_error))
         rid_token = request_id_var.set(request_id)
         try:
             await self.app(scope, receive, send)

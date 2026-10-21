@@ -32,8 +32,9 @@ Without `X-Ironscales-Scopes` the server asks for `company.all` and, if the key 
 that scope, `partner.all`. Tokens are cached in memory, keyed by a SHA-256 of the key and the
 scopes, until shortly before they expire, and refreshed once when the API rejects one.
 
-A request to `/mcp` without both required headers gets HTTP 401 naming the missing one; a
-non-numeric company id or a malformed scope list gets HTTP 400.
+A request to `/mcp` without both required headers gets HTTP 401 naming the missing one. A
+non-numeric company id or a malformed scope list does not block the request (tools/list still
+works); every tool call then returns an `invalid_argument` error naming the bad header.
 
 ## Tools
 
